@@ -40,3 +40,7 @@ func (w *Workspace) ListFiles() ([]string, error) {
 	}
 	return files, nil
 }
+
+func ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
