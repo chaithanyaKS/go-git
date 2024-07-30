@@ -10,6 +10,8 @@ import (
 
 	"github.com/chaithanyaKS/go-git/internal/blob"
 	"github.com/chaithanyaKS/go-git/internal/database"
+	"github.com/chaithanyaKS/go-git/internal/entry"
+	"github.com/chaithanyaKS/go-git/internal/tree"
 	"github.com/chaithanyaKS/go-git/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +40,7 @@ func commit() error {
 	if err != nil {
 		return err
 	}
+	var entries []entry.Entry
 	for _, file := range files {
 		fmt.Println(file)
 		data, err := workspace.ReadFile(file)
@@ -45,8 +48,15 @@ func commit() error {
 			return err
 		}
 		blobData := blob.New(data)
-		db.Store(blobData)
+		err = db.Store(blobData)
+		if err != nil {
+			return err
+		}
+		newEntry := entry.New(file, blobData.Oid)
+		entries = append(entries, newEntry)
 	}
+	tree := tree.New(entries)
+	db.Store(tree)
 	return nil
 
 }

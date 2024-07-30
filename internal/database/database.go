@@ -10,9 +10,12 @@ import (
 	"path"
 	"path/filepath"
 	"time"
-
-	"github.com/chaithanyaKS/go-git/internal/blob"
 )
+
+type ObjectWriter interface {
+	GetData() (string, error)
+	AssignOid(string)
+}
 
 type Database struct {
 	Path string
@@ -23,23 +26,31 @@ func New(path string) Database {
 	return Database{Path: path, Type: "blob"}
 }
 
-func (db *Database) Store(blob blob.Blob) {
-	content := fmt.Sprintf("%s %d%s%s", db.Type, len(blob.Data), "\000", blob.Data)
+func (db *Database) Store(blob ObjectWriter) error {
+	data, err := blob.GetData()
+	if err != nil {
+		return err
+	}
+	content := fmt.Sprintf("%s %d%s%s", db.Type, len(data), "\000", data)
 	objectId := createObjectId(content)
-	err := db.writeObject(objectId, content)
+	blob.AssignOid(objectId)
+	err = db.writeObject(objectId, content)
 	if err != nil {
 		fmt.Println(err)
 	}
+	return nil
 }
 
 func (db *Database) writeObject(objectId string, content string) error {
 	objectPath := path.Join(db.Path, objectId[0:2], objectId[2:])
 	dirname := filepath.Dir(objectPath)
 	tempPath := path.Join(dirname, generateTempName(6))
+
+	fmt.Println(objectPath, dirname, tempPath)
 	file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_RDWR, 0777)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.Mkdir(dirname, 0777)
+			os.Mkdir(dirname, 0644)
 		} else {
 			return err
 		}
@@ -48,7 +59,7 @@ func (db *Database) writeObject(objectId string, content string) error {
 	defer file.Close()
 	writer := zlib.NewWriter(file)
 	writer.Write([]byte(content))
-	defer writer.Close()
+	writer.Close()
 	os.Rename(tempPath, objectPath)
 
 	return nil
