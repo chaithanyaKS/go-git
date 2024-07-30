@@ -12,9 +12,9 @@ import (
 type Tree struct {
 	Entries []entry.Entry
 	Type    string
+	Oid     string
 }
 
-var ENTRY_FORMAT = "Z*H40"
 var MODE = "100644"
 
 func New(entries []entry.Entry) *Tree {
@@ -51,7 +51,9 @@ func packObjectId(oid string) (string, error) {
 	return string(byteArray), nil
 }
 
-func (t *Tree) AssignOid(oid string) {}
+func (t *Tree) AssignOid(oid string) {
+	t.Oid = oid
+}
 func (t *Tree) Len(oid string) int {
 	return len(t.Entries)
 }

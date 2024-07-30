@@ -34,11 +34,7 @@ func (db *Database) Store(blob ObjectWriter) error {
 	content := fmt.Sprintf("%s %d%s%s", db.Type, len(data), "\000", data)
 	objectId := createObjectId(content)
 	blob.AssignOid(objectId)
-	err = db.writeObject(objectId, content)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return nil
+	return db.writeObject(objectId, content)
 }
 
 func (db *Database) writeObject(objectId string, content string) error {
@@ -46,23 +42,24 @@ func (db *Database) writeObject(objectId string, content string) error {
 	dirname := filepath.Dir(objectPath)
 	tempPath := path.Join(dirname, generateTempName(6))
 
-	fmt.Println(objectPath, dirname, tempPath)
+	_, err := os.Stat(dirname)
+	if os.IsNotExist(err) {
+		os.Mkdir(dirname, 0777)
+	} else if err != nil {
+		return err
+	}
+
 	file, err := os.OpenFile(tempPath, os.O_CREATE|os.O_RDWR, 0777)
 	if err != nil {
-		if os.IsNotExist(err) {
-			os.Mkdir(dirname, 0644)
-		} else {
-			return err
-		}
+		return err
 	}
 
 	defer file.Close()
 	writer := zlib.NewWriter(file)
 	writer.Write([]byte(content))
 	writer.Close()
-	os.Rename(tempPath, objectPath)
 
-	return nil
+	return os.Rename(tempPath, objectPath)
 
 }
 
